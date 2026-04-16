@@ -14,10 +14,6 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app
           xcodebuild -version
 
-      - name: Install dependencies
-        run: |
-          brew install xcbeautify || true
-
       - name: Build WDA
         run: |
           xcodebuild build-for-testing \
@@ -27,14 +23,21 @@ jobs:
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES \
-            DEVELOPMENT_TEAM="" \
-            | xcbeautify || true
+            DEVELOPMENT_TEAM=""
+
+      - name: Sign with ldid
+        run: |
+          brew install ldid || true
+          APP=$(find DerivedData -name "WebDriverAgentRunner-Runner.app" -not -path "*/PlugIns/*" | head -1)
+          echo "App path: $APP"
+          ldid -S "$APP/WebDriverAgentRunner-Runner"
+          ldid -S "$APP/PlugIns/WebDriverAgentRunner.xctest/WebDriverAgentRunner"
 
       - name: Create IPA
         run: |
+          APP=$(find DerivedData -name "WebDriverAgentRunner-Runner.app" -not -path "*/PlugIns/*" | head -1)
           mkdir -p Payload
-          cp -r DerivedData/Build/Products/Debug-iphoneos/WebDriverAgentRunner-Runner.app Payload/
+          cp -r "$APP" Payload/
           zip -r WDA.ipa Payload/
 
       - name: Upload IPA
